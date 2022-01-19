@@ -1,0 +1,147 @@
+---
+title: "Mental Instability and Crime in Dallas PD"
+author: "Harun Abdulqadir"
+date: "18/02/2021"
+output:
+  pdf_document: 
+    number_sections: yes
+    fig_caption: yes
+    keep_tex: yes
+    fig_height: 2.5
+    fig_width: 5
+  word_document:
+    toc: yes
+editor_options: 
+  chunk_output_type: console
+---
+
+```{r setup, include=FALSE}
+library(ggplot2)
+library(knitr)
+library(tigerstats)
+opts_chunk$set(echo = FALSE)
+```
+
+# Introduction
+
+Racial Disparities are no secret in the USA or even in Dallas, Texas. The recent high profile deaths of George Floyd, Ahmaud Arbery and Breonna Taylor focused international attention on excessive force used by the the police against blacks in the USA - an obvious, recurring issue at hand that can perhaps be explained by a thesis that perhaps analyses deeper, historically racial tensions in the USA. What is often overlooked however, and this report will aim to focus on is the proportion of black people described as mentally ill being arrested in Dallas, Texas.
+
+Are black men exhibiting signs of mental illness at a higher risk of police violence and arrest than their counterparts, particularly while unarmed. Indeed, such investigations would be indicative of a concerning pattern in policing: While white men with mental illness are more likely to be given treatment, Black men with similar behaviors are more likely to be criminalized for their actions.Is it a crime to be black and mentally ill in the Dallas, Texas.
+
+We can investigate such a question using the using "Dept_37-00049\\37-00049_UOF-P_2016_prepped" from the online database on kaggle. This data was taken from the 'Center for Policing Equity' which is the first and largest collection of standardized police behavioral data which helps disparities in policing and shed light on police and crime behavior. My analysis will follow a particular line of thinking and the following variables will be of specific interest:
+
+-   **Subject Race**: The race of each subject
+-   **Subject Description**: The way the subject was described at the time of interaction
+-   **Type of Force Used**: Type of forced used by the police against subject
+-   **Subject Was  Arrested**: Whether the subject was arrested
+
+
+In examining these variables we can imagine the first two to be our explanatory variables with the last two being clear response variables. Our aim will be to examine the relationship between each of these explanatory variables and the the two response variables. As such, we will look into the following two questions:
+
+*Are black people more likely to be arrested if they are described as mentally unstable?
+*Are black, mentally unstable people more likely to be subjected to violent use of force?
+
+\newpage
+
+# Methods
+
+At first glance the data is vast and tricky, therefore to make any analysis it seems apparent that we should simply look at the breakdown of race of the perpetrators committing the crimes in the Dallas area. To observe this we will examine Figure 1.
+
+The following bar plot shows the crimes in Dept 37-00049.
+
+```{r echo=FALSE, paged.print=TRUE, fig.align='left', fig.height=6, fig.width=7}
+dallas26 <- read.csv("C:/Users/Harun/Documents/MSc Applied Data Science/MA304 - Exploratory Data Analysis and Data Visualisation/37-00049_UOF-P_2016_prepped.csv", header=TRUE)
+
+dallas26 %>%
+  group_by(SUBJECT_RACE) %>%
+  filter(!is.na(SUBJECT_RACE)) %>%
+  summarise(Count = n()) %>%
+  mutate(TotalCount = nrow(dallas26)) %>%
+  mutate(Percentage = (Count/TotalCount) * 100) %>%
+  arrange(desc(Count)) %>%
+  ungroup() %>%
+  mutate(SUBJECT_RACE = reorder(SUBJECT_RACE,Count)) %>%
+  
+  ggplot(aes(x = SUBJECT_RACE, y = Percentage)) +
+  geom_bar(stat = 'identity', colour="white", fill = 'salmon3') +
+  geom_text(aes(x = SUBJECT_RACE, y = 1, label = paste0("(", round(Percentage, 2)," % )", sep="")),
+            hjust=0, vjust=.5, size = 4, colour = 'black', 
+            fontface = 'bold') +
+  labs(x = 'race',
+       y= 'Percentage',
+       title = 'Race Percentage in Crimes') +
+  coord_flip() + 
+  theme_bw()
+```
+
+-   Black people are involved in around **56%** of the crimes
+-   Hispanic people are involved in around **22%**
+-   White people are involved in around **20%**
+
+Having this fundamental basis of knowing the percentages of crimes committed by which race is highly useful and will be integral in helping us control for any foregone conclusions we might have already created. It will also allow us to produce clearer conclusions and a better image overall on forthcoming analyses.
+
+\nextpage
+
+Having observed the proportion of crimes committed by each race, we will now go deeper and observe the description of the subjects by race in the Dallas department when arrested in an attempt to help us understand if black people are more likely to be arrested for mental instability.
+
+
+```{r fig.width = 6, fig.height = 5, fig.align='center'}
+
+dallas26 <-within(dallas26,
+                  SUBJECT_DESCRIPTION <- factor(SUBJECT_DESCRIPTION,
+                                                levels=names(sort(table(SUBJECT_DESCRIPTION),
+                                                                  decreasing = TRUE))))
+
+dallas26 %>%
+  group_by(SUBJECT_DESCRIPTION, SUBJECT_RACE) %>%
+  filter(!is.na(SUBJECT_DESCRIPTION)) %>%
+  arrange(desc("Total Count")) %>%
+  ungroup() %>%
+
+  ggplot(aes(x = SUBJECT_DESCRIPTION, fill = factor(SUBJECT_RACE))) +
+  geom_bar(width = 0.35) + theme_bw() + theme(axis.text.x = element_text(angle = 60, hjust = 1)) +
+  labs(x = "Subject Description",
+       y = 'Total Count',
+       title = 'Subject Description by Race',
+       fill = 'Race') +
+scale_fill_brewer(palette = "OrRd")
+```
+
+*Inference*
+
+-   As seen in Figure 1, the largest group of perpetrators were blacks. Despite this, we can still infer that 60% of arrests described as 'mentally unstable' falling to blacks is indeed abnormal. Being black and mentally unstable is also largest description for any arrest with 10% of all arrests.
+
+\nextpage
+
+Next we will examine the type of force used by the police department. This will be important in helping us understand whether or not racial disparities are in fact a weighing factor in police use of force, particularly when classed as mentally unstable.
+
+```{r fig.width = 5, fig.height = 4, fig.align='center'}
+
+dallas26 <-within(dallas26,
+                  TYPE_OF_FORCE_USED1 <- factor(TYPE_OF_FORCE_USED1,
+                                                levels=names(sort(table(TYPE_OF_FORCE_USED1),
+                                                                  decreasing = TRUE))))
+
+dallas26 %>%
+  group_by(TYPE_OF_FORCE_USED1, SUBJECT_RACE) %>%
+  filter(!is.na(TYPE_OF_FORCE_USED1)) %>%
+  arrange(desc("Total Count")) %>%
+  ungroup() %>%
+  
+  ggplot(aes(x = TYPE_OF_FORCE_USED1, fill = factor(SUBJECT_RACE))) +
+  geom_bar(width = 0.5) + theme_bw() + theme(axis.text.x = element_text(angle = 60, hjust = 1)) +
+  labs(x = "Type of Force Used",
+       y = 'Total Count',
+       title = 'Type of Force Used by Race',
+       fill = "SUBJECT RACE") +
+  scale_fill_brewer(palette = "OrRd")
+```
+
+*Inference*
+-   Most of the police responses warranted verbal commands which is good as it demonstrates a level of compliance throughout the community. The following types of force used were relatively violent and although never positive, it is not worrying that police have to use amounts of violence. In fact, the majority of 'Weapon display at person' instances were reactions mostly to 'FD-Unknown if Armed' persons which seems fairly appropriate. 
+
+
+
+# Result
+
+## Expenditure and
